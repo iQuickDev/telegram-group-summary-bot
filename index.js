@@ -76,12 +76,24 @@ bot.on(message('text'), async (ctx) =>
             return
         }
 
+        if (text.includes('/last'))
+        {
+            const summary = await db.getLastSummary()
+            if (!summary) {
+                ctx.reply('Nessun riassunto disponibile')
+                return
+            }
+            ctx.reply(summary)
+            return
+        }
+
         if (text.includes('/help'))
         {
             let helpMessage = "Comandi disponibili:\n" +
             "/summary <n> - Genera un riassunto degli ultimi N messaggi (default 100, max 500)\n" +
             "/summaries - Mostra lista dei riassunti con ID e timestamp\n" +
             "/view <id> - Mostra un riassunto specifico per ID\n" +
+            "/last - Mostra l'ultimo riassunto generato\n" +
             "/help - Mostra questo messaggio di aiuto\n" +
             "Powered by iQuick"
             ctx.reply(helpMessage)

@@ -163,6 +163,18 @@ class Database {
         })
     }
 
+    getLastSummary() {
+        return new Promise((resolve, reject) => {
+            this.db.get(
+                'SELECT summary FROM summaries ORDER BY timestamp DESC LIMIT 1',
+                (err, row) => {
+                    if (err) reject(err)
+                    else resolve(row ? row.summary : null)
+                }
+            )
+        })
+    }
+
     close() {
         this.db.close()
     }
