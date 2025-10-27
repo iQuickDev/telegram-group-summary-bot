@@ -2,12 +2,28 @@ const { Telegraf } = require('telegraf')
 const { message } = require('telegraf/filters')
 const dotenv = require('dotenv')
 const Database = require('./database')
-const { generateSummary } = require('./ai')
+const { generateSummary, generateUserSummary } = require('./ai')
 
 dotenv.config()
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 const db = new Database()
+
+function sendLongMessage(ctx, text) {
+    const parts = text.split('\n')
+    let currentMessage = ''
+    
+    for (const part of parts) {
+        if ((currentMessage + part + '\n').length > 4000) {
+            if (currentMessage) ctx.reply(currentMessage.trim())
+            currentMessage = part + '\n'
+        } else {
+            currentMessage += part + '\n'
+        }
+    }
+    
+    if (currentMessage) ctx.reply(currentMessage.trim())
+}
 
 bot.on(message('text'), async (ctx) =>
 {
@@ -22,7 +38,7 @@ bot.on(message('text'), async (ctx) =>
 
         const messageId = await db.saveMessage(userId, text)
 
-        if (text.includes('/summary'))
+        if (text.startsWith('/summary'))
         {
             const fetchCount = parseInt(text.split(' ')[1] || 100)
 
@@ -48,7 +64,7 @@ bot.on(message('text'), async (ctx) =>
             return
         }
 
-        if (text.includes('/summaries'))
+        if (text.startsWith('/summaries'))
         {
             const summaries = await db.getAllSummaries()
             if (summaries.length === 0) {
@@ -76,7 +92,7 @@ bot.on(message('text'), async (ctx) =>
             return
         }
 
-        if (text.includes('/last'))
+        if (text.startsWith('/last'))
         {
             const summary = await db.getLastSummary()
             if (!summary) {
@@ -87,13 +103,31 @@ bot.on(message('text'), async (ctx) =>
             return
         }
 
-        if (text.includes('/help'))
+        if (text.startsWith('/self')) {
+            const canGenerate = await db.canGenerateUserDescription(userId)
+            if (!canGenerate) {
+                ctx.reply('Puoi generare una nuova descrizione solo ogni 24 ore')
+                return
+            }
+            const userMessages = await db.getUserMessages(userId)
+            if (!userMessages) {
+                ctx.reply('Non hai ancora inviato messaggi')
+                return
+            }
+            const userDescription = await generateUserSummary(userMessages)
+            await db.saveUserDescription(userId, userDescription)
+            sendLongMessage(ctx, userDescription)
+            return
+        }
+
+        if (text.startsWith('/help'))
         {
             let helpMessage = "Comandi disponibili:\n" +
             "/summary <n> - Genera un riassunto degli ultimi N messaggi (default 100, max 500)\n" +
             "/summaries - Mostra lista dei riassunti con ID e timestamp\n" +
             "/view <id> - Mostra un riassunto specifico per ID\n" +
             "/last - Mostra l'ultimo riassunto generato\n" +
+            "/self - Genera una descrizione di te basata sui tuoi messaggi\n" +
             "/help - Mostra questo messaggio di aiuto\n" +
             "Powered by iQuick"
             ctx.reply(helpMessage)

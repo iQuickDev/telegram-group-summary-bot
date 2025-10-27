@@ -34,6 +34,14 @@ class Database {
                 FOREIGN KEY (requester_id) REFERENCES users (id),
                 FOREIGN KEY (message_id) REFERENCES messages (id)
             )`)
+
+            this.db.run(`CREATE TABLE IF NOT EXISTS user_descriptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                description TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )`)
         })
     }
 
@@ -170,6 +178,53 @@ class Database {
                 (err, row) => {
                     if (err) reject(err)
                     else resolve(row ? row.summary : null)
+                }
+            )
+        })
+    }
+
+    getUserMessages(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.all(
+                'SELECT text FROM messages WHERE user_id = ? ORDER BY timestamp ASC',
+                [userId],
+                (err, rows) => {
+                    if (err) reject(err)
+                    else resolve(rows.map(row => row.text).join('[END]'))
+                }
+            )
+        })
+    }
+
+    canGenerateUserDescription(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.get(
+                'SELECT timestamp FROM user_descriptions WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1',
+                [userId],
+                (err, row) => {
+                    if (err) reject(err)
+                    else {
+                        if (!row) resolve(true)
+                        else {
+                            const lastGenerated = new Date(row.timestamp)
+                            const now = new Date()
+                            const hoursDiff = (now - lastGenerated) / (1000 * 60 * 60)
+                            resolve(hoursDiff >= 24)
+                        }
+                    }
+                }
+            )
+        })
+    }
+
+    saveUserDescription(userId, description) {
+        return new Promise((resolve, reject) => {
+            this.db.run(
+                'INSERT INTO user_descriptions (user_id, description) VALUES (?, ?)',
+                [userId, description],
+                function(err) {
+                    if (err) reject(err)
+                    else resolve(this.lastID)
                 }
             )
         })
