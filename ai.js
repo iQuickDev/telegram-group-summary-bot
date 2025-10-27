@@ -18,7 +18,7 @@ async function generateSummary(messages) {
 }
 
 async function generateUserSummary(messages) {
-    const prompt = `Questa è una lista di messaggi di un singolo utente, sono divisi con il simbolo [END] Genera una descrizione dell'utente in base ai suoi messaggi, puoi anche permetterti di giudicarlo in base a quello che scrive, sii descrittivo e dettagliato. Evita di utilizzare simboli di formattazione come asterischi, cancelletti o underscore.
+    const prompt = `Questa è una lista di messaggi di un singolo utente, sono divisi con il simbolo [END] Genera una descrizione dell'utente in base ai suoi messaggi, puoi anche permetterti di giudicarlo in base a quello che scrive, sii descrittivo e dettagliato ma anche sintetico, non esagerare con la lunghezza della descrizione. Evita di utilizzare simboli di formattazione come asterischi, cancelletti o underscore.
     \n\n${messages}\nDescrizione:`
 
     const response = await ai.models.generateContent({
