@@ -2,140 +2,33 @@ const { Telegraf } = require('telegraf')
 const { message } = require('telegraf/filters')
 const dotenv = require('dotenv')
 const Database = require('./database')
-const { generateSummary, generateUserSummary } = require('./ai')
+const commands = require('./commands')
 
 dotenv.config()
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 const db = new Database()
 
-function sendLongMessage(ctx, text) {
-    const parts = text.split('\n')
-    let currentMessage = ''
-    
-    for (const part of parts) {
-        if ((currentMessage + part + '\n').length > 4000) {
-            if (currentMessage) ctx.reply(currentMessage.trim())
-            currentMessage = part + '\n'
-        } else {
-            currentMessage += part + '\n'
-        }
-    }
-    
-    if (currentMessage) ctx.reply(currentMessage.trim())
-}
-
-bot.on(message('text'), async (ctx) =>
-{
+bot.on(message('text'), async (ctx) => {
     const author = ctx.update.message.from.username
     const telegramId = ctx.update.message.from.id
     const text = ctx.update.message.text
 
-    try
-    {
+    try {
         await db.saveUser(author, telegramId)
-        const userId = await db.getUserId(telegramId)
-
-        const messageId = await db.saveMessage(userId, text)
-
-        if (text.startsWith('/summary'))
-        {
-            const fetchCount = parseInt(text.split(' ')[1] || 100)
-
-            if (fetchCount > 500)
-            {
-                ctx.reply('Puoi richiedere al massimo 500 messaggi per il riassunto')
-            }
-
-            const formattedMessages = await db.getLastNMessagesFormatted(fetchCount)
-            const lastSummaryMessageId = await db.getLastSummaryMessageId()
-            const messagesSinceLastSummary = await db.getMessageCountSince(lastSummaryMessageId)
-
-            if (messagesSinceLastSummary < 100)
-            {
-                ctx.reply(`Non sono stati inviati abbastanza messaggi dall'ultimo riassunto (almeno 100)`)
-                return
-            }
-
-            let summary = await generateSummary(formattedMessages)
-            await db.saveSummary(userId, summary, messageId)
-            ctx.reply(summary)
-
+        
+        if (!text.startsWith('/')) {
+            const userId = await db.getUserId(telegramId)
+            await db.saveMessage(userId, text)
             return
         }
 
-        if (text.startsWith('/summaries'))
-        {
-            const summaries = await db.getAllSummaries()
-            if (summaries.length === 0) {
-                ctx.reply('Nessun riassunto disponibile')
-                return
-            }
-            const list = summaries.map(s => `ID: ${s.id} - ${s.timestamp}`).join('\n')
-            ctx.reply(`Riassunti disponibili:\n${list}`)
-            return
+        const command = text.split(' ')[0].substring(1)
+        
+        if (commands[command]) {
+            await commands[command](ctx, db)
         }
-
-        if (text.startsWith('/view '))
-        {
-            const id = parseInt(text.split(' ')[1])
-            if (!id) {
-                ctx.reply('Specifica un ID valido: /view <id>')
-                return
-            }
-            const summary = await db.getSummaryById(id)
-            if (!summary) {
-                ctx.reply('Riassunto non trovato')
-                return
-            }
-            ctx.reply(summary)
-            return
-        }
-
-        if (text.startsWith('/last'))
-        {
-            const summary = await db.getLastSummary()
-            if (!summary) {
-                ctx.reply('Nessun riassunto disponibile')
-                return
-            }
-            ctx.reply(summary)
-            return
-        }
-
-        if (text.startsWith('/self')) {
-            const canGenerate = await db.canGenerateUserDescription(userId)
-            if (!canGenerate) {
-                ctx.reply('Puoi generare una nuova descrizione solo ogni 24 ore')
-                return
-            }
-            const userMessages = await db.getUserMessages(userId)
-            if (!userMessages) {
-                ctx.reply('Non hai ancora inviato messaggi')
-                return
-            }
-            const userDescription = await generateUserSummary(userMessages)
-            await db.saveUserDescription(userId, userDescription)
-            sendLongMessage(ctx, userDescription)
-            return
-        }
-
-        if (text.startsWith('/help'))
-        {
-            let helpMessage = "Comandi disponibili:\n" +
-            "/summary <n> - Genera un riassunto degli ultimi N messaggi (default 100, max 500)\n" +
-            "/summaries - Mostra lista dei riassunti con ID e timestamp\n" +
-            "/view <id> - Mostra un riassunto specifico per ID\n" +
-            "/last - Mostra l'ultimo riassunto generato\n" +
-            "/self - Genera una descrizione di te basata sui tuoi messaggi\n" +
-            "/help - Mostra questo messaggio di aiuto\n" +
-            "Powered by iQuick"
-            ctx.reply(helpMessage)
-        }
-
-
-    } catch (error)
-    {
+    } catch (error) {
         console.error(error)
     }
 })
