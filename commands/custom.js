@@ -29,7 +29,7 @@ module.exports = async (ctx, db) => {
     
     const canGenerate = await db.canGenerateUserDescription(userId)
     if (!canGenerate) {
-        ctx.reply('Puoi generare una nuova descrizione solo ogni 24 ore')
+        ctx.reply('Puoi richiedere un custom prompt solo ogni 10 minuti')
         return
     }
     

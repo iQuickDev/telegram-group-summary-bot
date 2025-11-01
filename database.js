@@ -208,8 +208,8 @@ class Database {
                         else {
                             const lastGenerated = new Date(row.timestamp)
                             const now = new Date()
-                            const hoursDiff = (now - lastGenerated) / (1000 * 60 * 60)
-                            resolve(hoursDiff >= 24)
+                            const minutesDiff = (now - lastGenerated) / (1000 * 60)
+                            resolve(minutesDiff >= 10)
                         }
                     }
                 }
