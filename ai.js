@@ -50,4 +50,21 @@ Risposta:`
   return response.text
 }
 
-module.exports = { generateSummary, generateUserSummary, generateCustomResponse }
+async function generateCustomPrompt(messages, customMessage)
+{
+  const prompt = `Questo messaggio proviene da una chat di gruppo, ti verrà inviato del contesto con dei messaggi degli utenti, questa è la richiesta: ${customMessage}
+
+Messaggi:
+${messages}
+
+Risposta:`
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+  });
+
+  return response.text
+}
+
+module.exports = { generateSummary, generateUserSummary, generateCustomResponse, generateCustomPrompt }

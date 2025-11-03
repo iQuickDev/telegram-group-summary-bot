@@ -42,6 +42,13 @@ class Database {
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )`)
+
+            this.db.run(`CREATE TABLE IF NOT EXISTS prompt_usage (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )`)
         })
     }
 
@@ -222,6 +229,61 @@ class Database {
             this.db.run(
                 'INSERT INTO user_descriptions (user_id, description) VALUES (?, ?)',
                 [userId, description],
+                function(err) {
+                    if (err) reject(err)
+                    else resolve(this.lastID)
+                }
+            )
+        })
+    }
+
+    getMessagesFromUsers(usernames, limit = 100) {
+        return new Promise((resolve, reject) => {
+            const placeholders = usernames.map(() => '?').join(',')
+            this.db.all(
+                `SELECT m.text, u.username, m.timestamp 
+                 FROM messages m 
+                 JOIN users u ON m.user_id = u.id 
+                 WHERE u.username IN (${placeholders})
+                 ORDER BY m.timestamp DESC 
+                 LIMIT ?`,
+                [...usernames, limit],
+                (err, rows) => {
+                    if (err) reject(err)
+                    else resolve(rows.reverse().map(msg => 
+                        `${msg.timestamp} ${msg.username}: ${msg.text}`
+                    ).join('\n'))
+                }
+            )
+        })
+    }
+
+    canUsePrompt(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.get(
+                'SELECT timestamp FROM prompt_usage WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1',
+                [userId],
+                (err, row) => {
+                    if (err) reject(err)
+                    else {
+                        if (!row) resolve(true)
+                        else {
+                            const lastUsed = new Date(row.timestamp)
+                            const now = new Date()
+                            const minutesDiff = (now - lastUsed) / (1000 * 60)
+                            resolve(minutesDiff >= 10)
+                        }
+                    }
+                }
+            )
+        })
+    }
+
+    recordPromptUsage(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.run(
+                'INSERT INTO prompt_usage (user_id) VALUES (?)',
+                [userId],
                 function(err) {
                     if (err) reject(err)
                     else resolve(this.lastID)

@@ -5,6 +5,7 @@ const last = require('./last')
 const self = require('./self')
 const help = require('./help')
 const custom = require('./custom')
+const prompt = require('./prompt')
 
 module.exports = {
     summary,
@@ -13,5 +14,6 @@ module.exports = {
     last,
     self,
     help,
-    custom
+    custom,
+    prompt
 }
