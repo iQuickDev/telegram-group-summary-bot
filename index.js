@@ -3,6 +3,7 @@ const { message } = require('telegraf/filters')
 const dotenv = require('dotenv')
 const Database = require('./database')
 const commands = require('./commands')
+const { generateCustomPrompt } = require('./ai')
 
 dotenv.config()
 
@@ -33,7 +34,28 @@ bot.on(message('text'), async (ctx) => {
     }
 })
 
+function scheduleAutoMessage() {
+    const minHours = 1
+    const maxHours = 2
+    const randomHours = minHours + Math.random() * (maxHours - minHours)
+    const delay = randomHours * 60 * 60 * 1000
+    
+    setTimeout(async () => {
+        try {
+            const messages = await db.getLastNMessagesFormatted(100)
+            if (messages) {
+                const response = await generateCustomPrompt(messages, "Commenta la conversazione recente del gruppo in modo naturale e spontaneo")
+                bot.telegram.sendMessage(process.env.CHAT_ID, response)
+            }
+        } catch (error) {
+            console.error('Auto message error:', error)
+        }
+        scheduleAutoMessage()
+    }, delay)
+}
+
 bot.launch()
+scheduleAutoMessage()
 
 process.once('SIGINT', () =>
 {

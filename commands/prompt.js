@@ -83,6 +83,8 @@ module.exports = async (ctx, db) => {
         return
     }
     
+    await db.recordPromptUsage(userId)
+    
     let messages = ''
     
     if (params.context === 'all') {
@@ -98,7 +100,6 @@ module.exports = async (ctx, db) => {
         messages = ''
     }
     
-    await db.recordPromptUsage(userId)
     const response = await generateCustomPrompt(messages, params.message)
     sendLongMessage(ctx, response)
 }
