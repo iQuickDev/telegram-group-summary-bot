@@ -3,7 +3,7 @@ const { message } = require('telegraf/filters')
 const dotenv = require('dotenv')
 const Database = require('./database')
 const commands = require('./commands')
-const { generateCustomPrompt } = require('./ai')
+const { generateCustomPrompt, generateResponse } = require('./ai')
 
 dotenv.config()
 
@@ -14,6 +14,7 @@ bot.on(message('text'), async (ctx) => {
     const author = ctx.update.message.from.username
     const telegramId = ctx.update.message.from.id
     const text = ctx.update.message.text
+    const botUsername = ctx.botInfo.username
 
     try {
         await db.saveUser(author, telegramId)
@@ -21,6 +22,13 @@ bot.on(message('text'), async (ctx) => {
         if (!text.startsWith('/')) {
             const userId = await db.getUserId(telegramId)
             await db.saveMessage(userId, text)
+            
+            // Check if bot is mentioned
+            if (text.includes(`@${botUsername}`)) {
+                const messages = await db.getRecentMessages(100)
+                const response = await generateResponse(messages, text)
+                await ctx.reply(response)
+            }
             return
         }
 
@@ -34,28 +42,7 @@ bot.on(message('text'), async (ctx) => {
     }
 })
 
-function scheduleAutoMessage() {
-    const minHours = 1
-    const maxHours = 2
-    const randomHours = minHours + Math.random() * (maxHours - minHours)
-    const delay = randomHours * 60 * 60 * 1000
-    
-    setTimeout(async () => {
-        try {
-            const messages = await db.getLastNMessagesFormatted(100)
-            if (messages) {
-                const response = await generateCustomPrompt(messages, "Commenta la conversazione recente del gruppo in modo naturale e spontaneo")
-                bot.telegram.sendMessage(process.env.CHAT_ID, response)
-            }
-        } catch (error) {
-            console.error('Auto message error:', error)
-        }
-        scheduleAutoMessage()
-    }, delay)
-}
-
 bot.launch()
-scheduleAutoMessage()
 
 process.once('SIGINT', () =>
 {

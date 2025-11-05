@@ -67,4 +67,27 @@ Risposta:`
   return response.text
 }
 
-module.exports = { generateSummary, generateUserSummary, generateCustomResponse, generateCustomPrompt }
+async function generateResponse(messages, mentionText)
+{
+  const formattedMessages = messages.reverse().map(msg => 
+    `${msg.username}: ${msg.text}`
+  ).join('\n')
+
+  const prompt = `Sei un membro naturale di questa chat di gruppo. Rispondi in modo breve e naturale come farebbe un utente normale. Usa il contesto dei messaggi recenti per rispondere in modo appropriato. Non essere formale, sii spontaneo e conciso.
+
+Messaggi recenti:
+${formattedMessages}
+
+Messaggio che ti menziona: ${mentionText}
+
+Rispondi brevemente:`
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+  });
+
+  return response.text
+}
+
+module.exports = { generateSummary, generateUserSummary, generateCustomResponse, generateCustomPrompt, generateResponse }
