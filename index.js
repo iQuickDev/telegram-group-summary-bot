@@ -3,7 +3,7 @@ const { message } = require('telegraf/filters')
 const dotenv = require('dotenv')
 const Database = require('./database')
 const commands = require('./commands')
-const { generateCustomPrompt, generateResponse } = require('./ai')
+const { generateResponse, generateSpontaneousResponse } = require('./ai')
 
 dotenv.config()
 
@@ -15,6 +15,7 @@ bot.on(message('text'), async (ctx) => {
     const telegramId = ctx.update.message.from.id
     const text = ctx.update.message.text
     const botUsername = ctx.botInfo.username
+    const replyToMessage = ctx.update.message.reply_to_message
 
     try {
         await db.saveUser(author, telegramId)
@@ -23,11 +24,25 @@ bot.on(message('text'), async (ctx) => {
             const userId = await db.getUserId(telegramId)
             await db.saveMessage(userId, text)
             
-            // Check if bot is mentioned
-            if (text.includes(`@${botUsername}`)) {
+            const shouldRespond = text.includes(`@${botUsername}`) || 
+                                (replyToMessage && replyToMessage.from.username === botUsername)
+            
+            if (shouldRespond) {
                 const messages = await db.getRecentMessages(100)
                 const response = await generateResponse(messages, text)
-                await ctx.reply(response)
+                if (response) {
+                    await ctx.reply(response)
+                }
+            } else {
+                const totalMessages = await db.getTotalMessageCount()
+                const randomThreshold = 15 + Math.floor(Math.random() * 11)
+                if (totalMessages % randomThreshold === 0) {
+                    const messages = await db.getRecentMessages(100)
+                    const response = await generateSpontaneousResponse(messages)
+                    if (response) {
+                        await ctx.reply(response)
+                    }
+                }
             }
             return
         }

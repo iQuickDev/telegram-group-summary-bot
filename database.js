@@ -292,6 +292,18 @@ class Database {
         })
     }
 
+    getTotalMessageCount() {
+        return new Promise((resolve, reject) => {
+            this.db.get(
+                'SELECT COUNT(*) as count FROM messages',
+                (err, row) => {
+                    if (err) reject(err)
+                    else resolve(row.count)
+                }
+            )
+        })
+    }
+
     close() {
         this.db.close()
     }
