@@ -4,7 +4,6 @@ const view = require('./view')
 const last = require('./last')
 const self = require('./self')
 const help = require('./help')
-const custom = require('./custom')
 const prompt = require('./prompt')
 
 module.exports = {
@@ -14,6 +13,5 @@ module.exports = {
     last,
     self,
     help,
-    custom,
     prompt
 }
