@@ -24,24 +24,11 @@ bot.on(message('text'), async (ctx) => {
             const userId = await db.getUserId(telegramId)
             await db.saveMessage(userId, text)
             
-            const shouldRespond = text.includes(`@${botUsername}`) || 
-                                (replyToMessage && replyToMessage.from.username === botUsername)
-            
-            if (shouldRespond) {
+            if (text.includes(`@${botUsername}`)) {
                 const messages = await db.getRecentMessages(100)
                 const response = await generateResponse(messages, text)
                 if (response) {
                     await ctx.reply(response)
-                }
-            } else {
-                const totalMessages = await db.getTotalMessageCount()
-                const randomThreshold = 15 + Math.floor(Math.random() * 11)
-                if (totalMessages % randomThreshold === 0) {
-                    const messages = await db.getRecentMessages(100)
-                    const response = await generateSpontaneousResponse(messages)
-                    if (response) {
-                        await ctx.reply(response)
-                    }
                 }
             }
             return
