@@ -15,7 +15,6 @@ bot.on(message('text'), async (ctx) => {
     const telegramId = ctx.update.message.from.id
     const text = ctx.update.message.text
     const botUsername = ctx.botInfo.username
-    const replyToMessage = ctx.update.message.reply_to_message
 
     try {
         await db.saveUser(author, telegramId)
@@ -40,6 +39,7 @@ bot.on(message('text'), async (ctx) => {
             await commands[command](ctx, db)
         }
     } catch (error) {
+        ctx.reply(JSON.stringify(error, null, 2))
         console.error(error)
     }
 })
