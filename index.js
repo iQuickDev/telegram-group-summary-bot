@@ -39,7 +39,7 @@ bot.on(message('text'), async (ctx) => {
             await commands[command](ctx, db)
         }
     } catch (error) {
-        ctx.reply(JSON.stringify(error, null, 2))
+        ctx.reply(`The following error has occurred: ${JSON.stringify(error, null, 2)}`)
         console.error(error)
     }
 })
